@@ -12,10 +12,14 @@ import { MultiSelect } from "react-native-element-dropdown"; // ✅ Multi-select
 import { auth, db } from "../firebase"; // ✅ Import Firestore
 import { doc, updateDoc } from "firebase/firestore";
 
+
 const HealthInfoScreen = () => {
   const [dietType, setDietType] = useState([]);
   const [foodAllergies, setFoodAllergies] = useState([]);
   const [dietaryRestrictions, setDietaryRestrictions] = useState([]);
+   const [currentStep, setCurrentStep] = useState(2); 
+   const [loading, setLoading] = useState(false);
+
 
   const navigation = useNavigation();
 
@@ -88,13 +92,12 @@ const HealthInfoScreen = () => {
       <Text style={styles.header}>Tell Us About Your Diet</Text>
 
       {/* Diet Type */}
-      <Text style={styles.label}>Select Your Diet Type:</Text>
       <MultiSelect
         style={styles.dropdown}
         data={dietOptions}
         labelField="label"
         valueField="value"
-        placeholder="Select Diet Type"
+        placeholder="Select Your Diet Type"
         search
         searchPlaceholder="Search..."
         value={dietType}
@@ -102,7 +105,6 @@ const HealthInfoScreen = () => {
       />
 
       {/* Food Allergies */}
-      <Text style={styles.label}>Do You Have Any Food Allergies?</Text>
       <MultiSelect
         style={styles.dropdown}
         data={allergyOptions}
@@ -116,32 +118,33 @@ const HealthInfoScreen = () => {
       />
 
       {/* Dietary Restrictions */}
-      <Text style={styles.label}>Any Dietary Restrictions?</Text>
       <MultiSelect
         style={styles.dropdown}
         data={restrictionOptions}
         labelField="label"
         valueField="value"
-        placeholder="Select Restrictions"
+        placeholder="Select Dietary Restrictions"
         search
         searchPlaceholder="Search..."
         value={dietaryRestrictions}
         onChange={(item) => setDietaryRestrictions(item)}
       />
 
-      {/* Submit & Skip Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.submitButton} onPress={saveHealthInfoToFirestore}>
-          <Text style={styles.buttonText}>Submit</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.skipButton}
-          onPress={() => navigation.replace("SuccessfulSetup")}
-        >
-          <Text style={styles.buttonText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Next & Skip Buttons */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.skipButton} onPress={() => navigation.replace("HealthInfoScreen")}>
+            <Text style={styles.buttonText}>Skip</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.submitButton} onPress={saveHealthInfoToFirestore} disabled={loading}>
+            {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.buttonText}>Next</Text>}
+          </TouchableOpacity>
+        </View>
+          {/* 3-Dot Progress Indicator (Positioned Above Buttons) */}
+          <View style={styles.progressContainer}>
+          <Text style={[styles.dot, currentStep === 1 && styles.activeDot]}>●</Text>
+          <Text style={[styles.dot, currentStep === 2 && styles.activeDot]}>●</Text>
+          <Text style={[styles.dot, currentStep === 3 && styles.activeDot]}>●</Text>
+        </View>
 
       <Toast />
     </ScrollView>
@@ -152,16 +155,16 @@ export default HealthInfoScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
     padding: 20,
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#f8f9fa",
   },
   header: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
-    textAlign: "center",
+    color: "#333",
+    marginTop: 50,
   },
   label: {
     fontSize: 16,
@@ -177,19 +180,27 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
+  progressContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 20,
+    marginBottom: 20, // Space before buttons
+  },
+  dot: {
+    fontSize: 20,
+    color: "#ccc", // Light color for inactive dots
+    marginHorizontal: 5,
+    marginTop: 40, // Space below dots
+  },
+  activeDot: {
+    color: "#007AFF", // Blue color for active step
+    fontSize: 24, // Bigger for emphasis
+  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
-    marginTop: 20,
-  },
-  submitButton: {
-    backgroundColor: "#0782F9",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    flex: 1,
-    marginRight: 10,
+    marginTop: 50,
   },
   skipButton: {
     backgroundColor: "#bbb",
@@ -197,10 +208,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     flex: 1,
+    marginRight: 10,
   },
-  buttonText: {
-    color: "white",
-    fontWeight: "700",
-    fontSize: 16,
+  submitButton: {
+    
+    backgroundColor: "#007AFF",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    flex: 1,
   },
 });

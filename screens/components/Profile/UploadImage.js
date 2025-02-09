@@ -50,7 +50,7 @@ const UploadImage = () => {
 
     const response = await fetch(uri);
     const blob = await response.blob();
-    const storageRef = ref(storage, `avatars/${user.uid}.jpg`); // Store by UID
+    const storageRef = ref(storage, `avatar/${user.uid}.jpg`); // Store by UID
     const uploadTask = uploadBytesResumable(storageRef, blob);
 
     uploadTask.on(
