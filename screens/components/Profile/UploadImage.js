@@ -4,6 +4,8 @@ import * as ImagePicker from "expo-image-picker";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { auth, db, storage } from "../../../firebase"; // Ensure correct Firebase import
+import { MaterialIcons } from "@expo/vector-icons";
+import { Colors } from "react-native/Libraries/NewAppScreen";
 
 
 const UploadImage = () => {
@@ -98,6 +100,20 @@ const UploadImage = () => {
         ) : (
           <Text style={styles.placeholderText}>Pick Image</Text>
         )}
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            right: 10,
+            zIndex: 9999,
+          }}>
+            <MaterialIcons
+              name="photo-camera"
+              size={32}
+              color={Colors}
+            />
+        </View>
+
       </TouchableOpacity>
       {progress > 0 && progress < 100 && <Text>Uploading: {progress}%</Text>}
     </View>
@@ -117,13 +133,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
     borderWidth: 2,
-    borderColor: "#888",
+    borderColor: "black",
   },
   profileImage: {
     width: "100%",
     height: "100%",
+    borderRadius: 100,
   },
   placeholderText: {
     color: "#555",

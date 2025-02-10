@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import LottieView from "lottie-react-native"; // ✅ Lottie for animation
 import * as Animatable from "react-native-animatable"; // ✅ Animatable for fade-in effect
+import * as Progress from 'react-native-progress';
+
 
 const SuccessfulSetup = () => {
   const navigation = useNavigation();
@@ -43,6 +45,20 @@ const SuccessfulSetup = () => {
           </TouchableOpacity>
         </Animatable.View>
       )}
+
+
+      {/* Progress Bar */}
+      <Progress.Bar 
+      progress={3 / 3} // Update for each screen
+      width={null}
+      height={6}
+      borderRadius={4}
+      color="#007AFF"
+      style={styles.progressBar} // 🔹 Apply the consistent style
+    />
+
+
+
     </View>
   );
 };
@@ -86,4 +102,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  progressBar: {
+    position: "absolute", // Fixes the position
+    top: 90, // Ensures it stays under the header
+    left: "5%", // Centers it on the screen
+    width: "90%", // Ensures consistent width
+    alignSelf: "center",
+    marginVertical: 20, // Consistent spacing
+    zIndex: 10, // Ensures it's above other elements
+  }
 });

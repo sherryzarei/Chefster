@@ -20,6 +20,7 @@ import ProfileScreen from "./screens/ProfileScreen";
 import MapScreen from "./screens/MapScreen";
 import RecipeRecommenderScreen from "./screens/RecipeRecommenderScreen";
 import MealPlannerScreen from "./screens/MealPlannerScreen";
+import EditProfile from "./screens/EditProfile";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -160,13 +161,17 @@ export function App() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {infoCompleted ? (
-        <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+        <>
+          <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+          <Stack.Screen name="EditProfile" component={EditProfile} />
+        </>
       ) : (
         <>
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="HealthInfoScreen" component={HealthInfoScreen} />
           <Stack.Screen name="SuccessfulSetup" component={SuccessfulSetup} />
           <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+          <Stack.Screen name="EditProfile" component={EditProfile} />
         </>
       )}
     </Stack.Navigator>

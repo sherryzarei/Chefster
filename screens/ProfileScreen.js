@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import {
   View,
   Text,
@@ -8,23 +8,48 @@ import {
   Dimensions,
   TouchableOpacity,
   Alert,
+  Image,
+  useWindowDimensions,
+  ScrollView
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { auth, db } from "../firebase";
 import { doc, getDoc, collection, query, orderBy, onSnapshot, deleteDoc, updateDoc } from "firebase/firestore";
-import UploadImage from "./components/Profile/UploadImage";
 import PostInput from "./components/PostInput";
 import Toast from "react-native-toast-message";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { MaterialIcons } from "@expo/vector-icons";
+import Post from "./components/Post";
+
+
 
 const screenWidth = Dimensions.get("window").width;
+
 
 const ProfileScreen = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState([]);
-
+  const [coverImage, setCoverImage] = useState("");
   const userId = auth.currentUser?.uid;
+
+    // Load user's profile image from Firestore when they log in
+    useEffect(() => {
+      async function fetchCoverImage() {
+        const user = auth.currentUser;
+        if (user) {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setCoverImage(userSnap.data().coverImage || ""); // Load saved image
+          }
+        }
+      }
+      fetchCoverImage();
+    }, []);
+
+
 
   // Fetch user data from Firestore
   useEffect(() => {
@@ -45,22 +70,22 @@ const ProfileScreen = () => {
     fetchUserData();
   }, [userId]);
 
-  // Fetch posts in real-time
-  useEffect(() => {
-    if (!userId) return;
-    const postsRef = collection(db, "users", userId, "posts");
-    const q = query(postsRef, orderBy("createdAt", "desc"));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const postsList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setPosts(postsList);
-    });
-
-    return unsubscribe;
-  }, [userId]);
+    // Fetch posts in real-time
+    useEffect(() => {
+      if (!userId) return;
+      const postsRef = collection(db, "users", userId, "posts");
+      const q = query(postsRef, orderBy("createdAt", "desc"));
+  
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const postsList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPosts(postsList);
+      });
+  
+      return unsubscribe;
+    }, [userId]);
 
   // Edit user info field
   const editUserInfo = (field, currentValue) => {
@@ -99,6 +124,7 @@ const ProfileScreen = () => {
     );
   };
 
+const navigation = useNavigation();
   // Delete a post from Firestore
   const deletePost = async (postId) => {
     Alert.alert(
@@ -132,155 +158,154 @@ const ProfileScreen = () => {
   };
 
   if (loading) return <ActivityIndicator size="large" color="#0782F9" style={{ flex: 1 }} />;
-
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
+      <StatusBar backgroundColor="gray" />
+  
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false} // Optional: Hide scrollbar
+      >
+        <View style={{ width: "100%" }}>
+          <Image
+            source={{ uri: coverImage }}
+            resizeMode="cover"
+            style={{
+              width: "100%",
+              height: 228,
+            }}
+          />
+        </View>
+  
+        <View style={{ flex: 1, alignItems: "center" }}>
+          <Image
+            source={{ uri: userData.profileImage }}
+            resizeMode="cover"
+            style={{
+              width: 155,
+              height: 155,
+              borderRadius: 999,
+              borderWidth: 2,
+              borderColor: "white",
+              marginTop: -90,
+            }}
+          />
+          <Text style={{
+            fontSize: 20,
+            fontWeight: "bold",
+            color: "#4B0082",
+            marginBottom: 10,
+            marginTop: 10,
+          }}>
+            {userData.firstName} {userData.lastName}
+          </Text>
+  
+          <Text style={{ fontSize: 15, color: "black", marginBottom: 10 }}>
+            {userData.about}
+          </Text>
+  
+          <View style={{
+            flexDirection: "row",
+            marginVertical: 6,
+            alignItems: "center",
+          }}>
+            <MaterialIcons name="location-on" size={24} color="black" />
+            <Text style={{ fontSize: 15, color: "black", marginLeft: 4 }}>
+              {userData.city}
+            </Text>
+          </View>
+  
+          <View style={{ flexDirection: "column", marginTop: 20, alignItems: "center" }}>
+          {/* Buttons Container - Fixed Width to Prevent Shifting */}
+          <View style={{ flexDirection: "row", width: 260, justifyContent: "space-between" }}>
+            <TouchableOpacity
+              style={{
+                width: 124,
+                height: 36,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 10,
+                backgroundColor: "#4B0082",
+              }}
+            >
+              <Text style={{ color: "white" }} onPress={() => navigation.navigate("EditProfile", { screen: "EditProfile" })}>
+                Friends
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                width: 124,
+                height: 36,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 10,
+                backgroundColor: "#4B0082",
+              }}
+            >
+              <Text style={{ color: "white" }} onPress={() => navigation.navigate("EditProfile", { screen: "EditProfile" })}>
+                Edit Profile
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Post Input Section */}
+          <View style={{ marginTop: 30, width: screenWidth - 40 , borderColor: "#ccc", borderWidth: 1, borderRadius: 10, }}> 
+            <PostInput onPostSuccess={() => {}} />
+          </View>
+        </View>
+
+        </View>
+  
+        {/* Posts List */}
+        
       <FlatList
         ListHeaderComponent={
-          <>
-            <LinearGradient
-              colors={["#E0E0E0", "#E0E0E0", "#E0E0E0"]}
-              style={styles.profileContainer}
-            >
-              <UploadImage userId={userId} />
-              {userData && (
-                <View style={styles.profileInfo}>
-                  <View style={styles.editableField}>
-                  <Text style={styles.name}>{userData.firstName} {userData.lastName}</Text>
-                    <TouchableOpacity onPress={() => editUserInfo("firstName", userData.firstName)}>
-                      <MaterialIcons name="edit" size={20} color="#3b5998" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.editableField}>
-                    <Text style={styles.bio}>{userData.about}</Text>
-                    <TouchableOpacity onPress={() => editUserInfo("about", userData.about)}>
-                      <MaterialIcons name="edit" size={20} color="#3b5998" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.infoContainer}>
-                    <View style={styles.editableField}>
-                      <Text style={styles.info}>Gender: {userData.gender}</Text>
-                      <TouchableOpacity onPress={() => editUserInfo("gender", userData.gender)}>
-                        <MaterialIcons name="edit" size={20} color="#3b5998" />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.editableField}>
-                      <Text style={styles.info}>Age: {userData.age}</Text>
-                      <TouchableOpacity onPress={() => editUserInfo("age", String(userData.age))}>
-                        <MaterialIcons name="edit" size={20} color="#3b5998" />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.editableField}>
-                    <Text style={styles.info}>
-                    Date of Birth: {userData?.dateOfBirth 
-                        ? new Date(userData.dateOfBirth.seconds * 1000).toISOString().split("T")[0]  
-                        : "Birthdate not set"}
-                    </Text>
-                    <TouchableOpacity onPress={() => editUserInfo("dateOfBirth", userData.dateOfBirth)}>
-                        <MaterialIcons name="edit" size={20} color="#3b5998" />
-                    </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              )}
-            </LinearGradient>
-
-            {/* Post Input Component */}
-            <PostInput onPostSuccess={() => {}} />
-
-            <Text style={styles.sectionHeader}>Your Posts</Text>
-          </>
+          <Text style={styles.sectionHeader}>Your Posts</Text>
         }
         data={posts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.post}>
-            <View style={styles.postHeader}>
-              <Text style={styles.postText}>{item.text}</Text>
-              <View style={styles.iconContainer}>
-                <TouchableOpacity onPress={() => console.log("Edit post:", item.id)}>
-                  <MaterialIcons name="edit" size={20} color="#3b5998" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => deletePost(item.id)}>
-                  <MaterialIcons name="delete" size={20} color="#D32F2F" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <Text style={styles.postDate}>{new Date(item.createdAt.seconds * 1000).toLocaleString()}</Text>
-          </View>
+          <Post post={item} onDelete={deletePost} />
         )}
         contentContainerStyle={styles.postsList}
         ListEmptyComponent={<Text style={styles.noPosts}>No posts yet.</Text>}
+        keyboardShouldPersistTaps="handled"
       />
-
+      </ScrollView>
       <Toast />
-    </View>
+    </SafeAreaView>
   );
+  
 };
 
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  editableField: {
-    flexDirection: "row",
+  profileHeader: {
     alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    marginVertical: 5,
+    marginBottom: 20,
+    paddingTop: 20,
   },
-  container: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: "#f5f5f5",
-    alignItems: "center",
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: "#4B0082",
   },
-  profileContainer: {
-    width: screenWidth - 40,
-    alignSelf: "center",
-    padding: 20,
-    borderRadius: 15,
-    marginVertical: 15,
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    alignItems: "center",
-    marginTop: 50,
-  },
-  profileInfo: {
-    alignItems: "center",
-    width: "100%",
-  },
-  name: {
-    fontSize: 36,
+  userName: {
+    fontSize: 20,
     fontWeight: "bold",
-    color: "black",
-    marginTop: 10,
-    textAlign: "center",
-  },
-  bio: {
-    fontSize: 16,
-    textAlign: "center",
-    color: "black",
-    marginVertical: 10,
-    fontFamily: "fantasy",
-    fontStyle: "italic",
-  },
-  infoContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    padding: 10,
-    borderRadius: 10,
+    color: "#4B0082",
     marginTop: 10,
   },
-  info: {
-    fontSize: 16,
-    color: "black",
-    marginVertical: 3,
+  userBio: {
+    fontSize: 14,
+    color: "#333",
+    marginTop: 5,
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
   sectionHeader: {
     fontSize: 20,
@@ -319,6 +344,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#777",
     marginTop: 5,
+  },
+  mediaContainer: {
+    marginTop: 10,
+    alignItems: "center",
+  },
+  postImage: {
+    width: "80%",
+    height: 250,
+  },
+  postVideo: {
+    width: "100%",
+    height: 250,
+    borderRadius: 10,
   },
   noPosts: {
     textAlign: "center",

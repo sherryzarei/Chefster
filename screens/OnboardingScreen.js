@@ -17,6 +17,8 @@ import { useNavigation } from "@react-navigation/native";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
+import * as Progress from 'react-native-progress';
+
 
 
 const OnboardingScreen = () => {
@@ -88,8 +90,9 @@ const OnboardingScreen = () => {
     } finally {
       setLoading(false);
     }
-  };  
-
+  }; 
+  
+  
   return (
   <ScrollView contentContainerStyle={styles.container}>
   <Text style={styles.header}>Complete Your Profile</Text>
@@ -152,11 +155,17 @@ const OnboardingScreen = () => {
     </TouchableOpacity>
   </View>
     {/* 3-Dot Progress Indicator (Positioned Above Buttons) */}
-    <View style={styles.progressContainer}>
-    <Text style={[styles.dot, currentStep === 1 && styles.activeDot]}>●</Text>
-    <Text style={[styles.dot, currentStep === 2 && styles.activeDot]}>●</Text>
-    <Text style={[styles.dot, currentStep === 3 && styles.activeDot]}>●</Text>
-  </View>
+    {/* Progress Bar */}
+    <Progress.Bar 
+      progress={1 / 3} // Update for each screen
+      width={null}
+      height={6}
+      borderRadius={4}
+      color="#007AFF"
+      style={styles.progressBar} // 🔹 Apply the consistent style
+    />
+    
+
 
   <Toast />
 </ScrollView>
@@ -252,4 +261,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
+  progressBar: {
+    position: "absolute", // Fixes the position
+    top: 90, // Ensures it stays under the header
+    left: "5%", // Centers it on the screen
+    width: "90%", // Ensures consistent width
+    alignSelf: "center",
+    marginVertical: 20, // Consistent spacing
+    zIndex: 10, // Ensures it's above other elements
+  }
 });
