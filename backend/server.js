@@ -1,16 +1,54 @@
 const express = require('express');
 const cors = require('cors');
 const sql = require('./db_config/supabaseClient');
-const { admin, db, storage } = require('./db_config/firebase');
+const admin = require("firebase-admin");
+const serviceAccount = require("./serviceAccount.json");
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
-app.use(cors());
+
+
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Initialize Firebase Admin
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://chefster-e2086.firebaseio.com"
+});
+const db = admin.firestore();
 
-// ==========================================
-// User Firebase Endpoints
+// Create HTTP server for Socket.io
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+// =============== SOCKET.IO (Chat Feature) ===================
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+
+    socket.on('sendMessage', async (messageData) => {
+        try {
+            await db.collection('privateMessages').add({
+                ...messageData,
+                timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            io.emit('receiveMessage', messageData);
+        } catch (error) {
+            console.error("Error saving message:", error);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected');
+    });
+});
 
 // Retrieve all users
 app.get('/users', async (req, res) => {
@@ -234,10 +272,8 @@ app.get('/ingredients', async (req, res) => {
     }
 });
 
-
-
-
-const PORT = process.env.PORT || 6000;
-app.listen(PORT, () => {
+// =============== START SERVER ===================
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
