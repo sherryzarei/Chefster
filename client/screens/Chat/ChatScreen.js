@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   Button,
+  TouchableNativeFeedback
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { collection, getDocs, getDoc, addDoc, serverTimestamp, doc } from "firebase/firestore";

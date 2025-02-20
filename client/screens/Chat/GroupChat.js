@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,16 +8,31 @@ import {
   StyleSheet,
   Image,
 } from "react-native";
-import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db, auth, storage } from "../../src/firebase-config"; // Make sure to import storage for Firebase Storage
+import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, doc, getDoc } from "firebase/firestore";
+import { db, auth, storage } from "../../src/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"; // Firebase Storage imports
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 export default function GroupChat({ route, navigation }) {
   const { group } = route.params;
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const flatListRef = useRef(null)
+
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+
+  // Debugging: Log the group object and photo URL
+  useEffect(() => {
+    console.log("Group Object:", group);
+    console.log("Group Photo URL:", group.photo);
+  }, [group]);
 
   useEffect(() => {
     const messagesQuery = query(
@@ -36,14 +51,35 @@ export default function GroupChat({ route, navigation }) {
     return () => unsubscribe();
   }, [group]);
 
+  const extractLinks = (text) => {
+    const regex = /https?:\/\/[^\s]+/g;
+    return text.match(regex) || [];
+  };
+  
+
   const sendMessage = async () => {
     if (newMessage.trim()) {
       try {
+        const userDocRef = doc(db, "users", auth.currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+          console.error("User document does not exist!");
+          return;
+        }
+
+        const userData = userDoc.data();
+        const links = extractLinks(newMessage); // Extract any links from the message text
+
         await addDoc(collection(db, "groups", group.id, "messages"), {
           text: newMessage,
           senderId: auth.currentUser.uid,
+          senderName: userData.firstName,
+          senderPhoto: userData.profileImage,
           createdAt: serverTimestamp(),
+          links: links,
         });
+
         setNewMessage("");
       } catch (error) {
         console.error("Error sending message:", error);
@@ -51,7 +87,6 @@ export default function GroupChat({ route, navigation }) {
     }
   };
 
-  // Function to pick an image and upload it to Firebase Storage
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -62,9 +97,8 @@ export default function GroupChat({ route, navigation }) {
 
     if (!result.canceled) {
       const imageUri = result.assets[0].uri;
-      const imageName = `images/${Date.now()}.jpg`; // Unique name for the image
+      const imageName = `images/${Date.now()}.jpg`;
 
-      // Upload image to Firebase Storage
       const imageRef = ref(storage, imageName);
       const response = await fetch(imageUri);
       const blob = await response.blob();
@@ -72,19 +106,27 @@ export default function GroupChat({ route, navigation }) {
 
       uploadTask.on(
         "state_changed",
-        (snapshot) => {
-          // You can track progress here if needed
-        },
+        (snapshot) => {},
         (error) => {
           console.error("Error uploading image:", error);
         },
         async () => {
-          // Get the download URL after the upload is complete
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
-          // Send the image URL as a message to the group
+          const userDocRef = doc(db, "users", auth.currentUser.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (!userDoc.exists()) {
+            console.error("User document does not exist!");
+            return;
+          }
+
+          const userData = userDoc.data();
+
           const messageData = {
             senderId: auth.currentUser.uid,
+            senderName: userData.firstName,
+            senderPhoto: userData.profileImage,
             imageUrl: downloadURL,
             createdAt: serverTimestamp(),
           };
@@ -98,10 +140,10 @@ export default function GroupChat({ route, navigation }) {
       );
     }
   };
-  const navigateToGroupProfile = () => {
-    navigation.navigate("GroupProfile", { group }); // Navigate to ProfileScreen
-  };
 
+  const navigateToGroupProfile = () => {
+    navigation.navigate("GroupProfile", { selectedGroup: group });
+  };
 
   return (
     <View style={styles.container}>
@@ -113,33 +155,71 @@ export default function GroupChat({ route, navigation }) {
 
         <View style={styles.groupInfo}>
           <TouchableOpacity onPress={navigateToGroupProfile} style={styles.userInfo}>
-            <Image source={{ uri: group.photo }} style={styles.profilePhoto} />
+            <Image
+              source={{ uri: group.photo }}
+              style={styles.profilePhoto}
+              onError={(error) => console.error("Failed to load group photo:", error)}
+            />
+          <View style={styles.groupTextContainer}>
             <Text style={styles.groupName}>{group.name}</Text>
             <Text style={styles.membersCount}>{group.members.length} members</Text>
+          </View>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Messages List */}
       <FlatList
+        ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
         style={styles.messagesList}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.messageContainer,
-              item.senderId === auth.currentUser.uid
-                ? styles.sentMessage
-                : styles.receivedMessage,
-            ]}
-          >
-            {item.text && <Text style={styles.messageText}>{item.text}</Text>}
-            {item.imageUrl && (
-              <Image source={{ uri: item.imageUrl }} style={styles.messageImage} />
-            )}
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const isSender = item.senderId === auth.currentUser.uid;
+
+          return (
+            <View
+              style={[
+                styles.messageWrapper,
+                isSender ? styles.sentMessageWrapper : styles.receivedMessageWrapper,
+              ]}
+            >
+              {!isSender && (
+                <View style={styles.senderContainer}>
+                  <Image source={{ uri: item.senderPhoto }} style={styles.senderPhoto} />
+                  <View style={styles.senderDetails}>
+                    <Text style={styles.senderName}>{item.senderName}</Text>
+                    <View
+                      style={[
+                        styles.messageContainer,
+                        isSender ? styles.sentMessage : styles.receivedMessage,
+                      ]}
+                    >
+                      {item.text && <Text style={styles.messageText}>{item.text}</Text>}
+                      {item.imageUrl && (
+                        <Image source={{ uri: item.imageUrl }} style={styles.messageImage} />
+                      )}
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {isSender && (
+                <View
+                  style={[
+                    styles.messageContainer,
+                    styles.sentMessage,
+                  ]}
+                >
+                  {item.text && <Text style={styles.messageText}>{item.text}</Text>}
+                  {item.imageUrl && (
+                    <Image source={{ uri: item.imageUrl }} style={styles.messageImage} />
+                  )}
+                </View>
+              )}
+            </View>
+          );
+        }}
       />
 
       {/* Input Section */}
@@ -169,8 +249,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f6f7", paddingTop: 20 },
   header: {
     flexDirection: "row",
-    fontSize: 24,
-    fontWeight: "bold",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -191,11 +269,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  groupProfilePhoto: {
+  userInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  profilePhoto: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 20, 
     marginRight: 10,
+  },
+  groupTextContainer: {
+    flexDirection: "column",
+    justifyContent: "center",
   },
   groupName: {
     fontSize: 18,
@@ -211,31 +298,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
   },
-  messageContainer: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 20,
+  messageWrapper: {
     marginVertical: 5,
+  },
+  sentMessageWrapper: {
+    alignItems: "flex-end",
+  },
+  receivedMessageWrapper: {
+    alignItems: "flex-start",
+  },
+  senderContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  senderPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  senderDetails: {
     maxWidth: "80%",
+    marginLeft: 10,
+  },
+  senderName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 2,
+  },
+  messageContainer: {
+    padding: 10,
+    borderRadius: 15,
+    maxWidth: "100%",
     alignSelf: "flex-start",
+    marginBottom: 3,
   },
   sentMessage: {
-    backgroundColor: "#0088cc",
+    backgroundColor: "#A0E3FF",
     alignSelf: "flex-end",
   },
   receivedMessage: {
-    backgroundColor: "#f1f1f1",
-    alignSelf: "flex-start",
+    backgroundColor: "#E0E0E0",
   },
   messageText: {
     fontSize: 16,
-    color: "#fff",
+    color: "#333",
   },
   messageImage: {
     width: 200,
     height: 200,
     borderRadius: 10,
-    marginTop: 10,
+    marginTop: 5,
   },
   inputContainer: {
     flexDirection: "row",

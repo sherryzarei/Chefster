@@ -28,6 +28,7 @@
     "expo-status-bar": "~2.0.1",
     "firebase": "^11.3.0",
     "install": "^0.13.0",
+    "linkifyjs": "^4.2.0",
     "lottie-react-native": "7.1.0",
     "npx": "^10.2.2",
     "react": "18.3.1",
