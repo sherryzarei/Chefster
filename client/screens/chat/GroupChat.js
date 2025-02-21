@@ -8,12 +8,13 @@ import {
   StyleSheet,
   Image,
 } from "react-native";
-import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, doc, getDoc } from "firebase/firestore";
 import { db, auth, storage } from "../../firebase"; // Make sure to import storage for Firebase Storage
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"; // Firebase Storage imports
 import { SafeAreaView } from "react-native-safe-area-context";
+
 
 
 export default function GroupChat({ route, navigation }) {

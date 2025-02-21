@@ -7,6 +7,9 @@ import { db } from '../firebase';
 import { doc, setDoc } from "firebase/firestore";
 import Toast from 'react-native-toast-message';
 
+
+
+
 const RegisterScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -108,8 +111,8 @@ const RegisterScreen = () => {
     
             // Add user to Firestore with infoCompleted set to false
             await setDoc(doc(db, 'users', user.uid), {
-                firstName,
-                lastName,
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
                 email,
                 infoCompleted: false, // Initial state for the optional info
             });
@@ -126,7 +129,12 @@ const RegisterScreen = () => {
                 'auth/invalid-email': 'Invalid email address.',
                 'auth/weak-password': 'Weak password. Please follow password guidelines.',
             };
-            showToast('error', 'Registration Error', errorMessages[error.code] || 'Something went wrong. Please try again.');
+            showToast('success', 'Registration Successful', 'Please check your email for verification.');
+            
+            // Navigate to Login screen after the toast
+            setTimeout(() => {
+                navigation.navigate('Login');
+            }, 4000);
         } finally {
             setLoading(false);
         }
