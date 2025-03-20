@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  Dimensions,
+    View,
+    Text,
+    TouchableOpacity,
+    Modal,
+    StyleSheet,
+    Dimensions,
 } from "react-native";
 import { MultiSelect } from "react-native-element-dropdown";
 import Icon from "react-native-vector-icons/Ionicons";
@@ -50,7 +50,7 @@ const EditPreferences = ({ uid }) => {
     useEffect(() => {
         const fetchPreferences = async () => {
             try {
-                const response = await axios.get(`http://${IP_ADDRESS}:8080/users/certain_user/${userID}`);
+                const response = await axios.get(`http://${IP_ADDRESS}:8323/users/certain_user/${userID}`);
                 setDietType(response.data.dietType || []);
                 setFoodAllergies(response.data.foodAllergies || []);
             } catch (error) {
@@ -63,7 +63,7 @@ const EditPreferences = ({ uid }) => {
 
     const handleSavePreferences = async () => {
         try {
-            await axios.put(`http://${IP_ADDRESS}:8080/users/update_user/${userID}`, { foodAllergies, dietType });
+            await axios.put(`http://${IP_ADDRESS}:8323users/update_user/${userID}`, { foodAllergies, dietType });
             Toast.show({ type: "success", text1: "Preferences updated successfully" });
             setShowModal(false);
         } catch (error) {

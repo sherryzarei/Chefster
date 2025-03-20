@@ -12,6 +12,7 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Entypo from 'react-native-vector-icons/Entypo';
 import Icon from 'react-native-vector-icons/Ionicons';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
 const { width, height } = Dimensions.get('window');
 
@@ -62,6 +63,9 @@ export default function Steps({ navigation, route }) {
     return (
         <SafeAreaView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+                <TouchableOpacity style={styles.backButton} onPress={() => { navigation.goBack() }}>
+                    <FontAwesome5 name="arrow-left" size={24} color="white" />
+                </TouchableOpacity>
                 <View style={styles.container}>
                     {/* Header */}
                     <View style={styles.headerView}>
@@ -180,12 +184,30 @@ const styles = StyleSheet.create({
         padding: 30,
         marginBottom: 15,
         alignItems: 'center',
+        marginTop: 55
     },
     headerText: { fontWeight: 'bold', fontFamily: 'serif', fontSize: 20, color: 'black', textAlign: 'center', marginBottom: 10 },
     modalButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
         marginBottom: 20,
+    },
+    backButton: {
+        position: "absolute",
+        top: 10,
+        left: 10,
+        zIndex: 1,
+        backgroundColor: "black",
+        borderRadius: 20,
+        padding: 10,
+        shadowColor: "black",
+        shadowOffset: { width: 2, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+
     },
     modalButton: {
         backgroundColor: 'black',

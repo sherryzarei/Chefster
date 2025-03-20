@@ -4,6 +4,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Entypo from 'react-native-vector-icons/Entypo';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -35,11 +36,15 @@ export default function AcceptedRecipe({ navigation, route }) {
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
+            <TouchableOpacity style={styles.backButton} onPress={() => { navigation.goBack() }}>
+                <FontAwesome5 name="arrow-left" size={24} color="white" />
+            </TouchableOpacity>
             <ScrollView
                 contentContainerStyle={styles.scrollViewContainer}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
+
                 <View style={styles.container}>
                     {/* Header */}
                     <View style={styles.headerView}>
@@ -118,15 +123,33 @@ export default function AcceptedRecipe({ navigation, route }) {
 
 const styles = StyleSheet.create({
     scrollViewContainer: { flexGrow: 1 },
-    container: { flex: 1, padding: 20, width: width },
+    container: { flex: 1, padding: 20, width: width, marginTop: 30 },
     headerView: {
         borderColor: 'black',
         borderWidth: 3,
         borderRadius: 10,
         backgroundColor: '#edf0f5',
         padding: 30,
-        marginBottom: 15,
+        marginBottom: 5,
         alignItems: 'center',
+    },
+    backButton: {
+        position: "absolute",
+        top: 10,
+        left: 10,
+        zIndex: 1,
+        backgroundColor: "black",
+        borderRadius: 20,
+        padding: 10,
+        shadowColor: "black",
+        shadowOffset: { width: 2, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        marginTop: 30
+
     },
     headerText: {
         fontWeight: 'bold',
@@ -216,7 +239,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-around',
         marginTop: 20,
-        marginBottom: 95,
+        marginBottom: 25,
     },
     button: {
         backgroundColor: 'black',

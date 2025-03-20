@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -9,7 +10,7 @@ export default function ReviewIngredients({ navigation, route }) {
     const { recipeData } = route.params;
 
     const handleBack = () => {
-        navigation.navigate('Accepted Recipe');
+        navigation.goBack();
     };
 
     const handleStartCooking = () => {
@@ -29,6 +30,9 @@ export default function ReviewIngredients({ navigation, route }) {
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
+            <TouchableOpacity style={styles.backButton} onPress={() => { navigation.goBack() }}>
+                <FontAwesome5 name="arrow-left" size={24} color="white" />
+            </TouchableOpacity>
             <ScrollView contentContainerStyle={styles.scrollViewContainer}>
                 <View style={styles.container}>
                     <View style={styles.ingredientsContainer}>
@@ -60,6 +64,7 @@ const styles = StyleSheet.create({
     },
     scrollViewContainer: {
         flexGrow: 1,
+        marginTop: 30
     },
     ingredientsContainer: {
         padding: 10,
@@ -73,6 +78,24 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 4,
         elevation: 5,
+    },
+    backButton: {
+        position: "absolute",
+        top: 10,
+        left: 10,
+        zIndex: 1,
+        backgroundColor: "black",
+        borderRadius: 20,
+        padding: 10,
+        shadowColor: "black",
+        shadowOffset: { width: 2, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        marginTop: 50
+
     },
     ingredientsHeader: {
         fontSize: 18,

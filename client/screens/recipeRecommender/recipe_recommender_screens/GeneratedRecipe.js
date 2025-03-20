@@ -4,6 +4,7 @@ import RecipeCard from '../../components/RecipeCard';
 import Entypo from 'react-native-vector-icons/Entypo';
 import { useSharedValue, withSpring, runOnJS, withTiming } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -107,6 +108,9 @@ const GeneratedRecipe = ({ navigation, route }) => {
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
+            <TouchableOpacity style={styles.backButton} onPress={() => { navigation.goBack() }}>
+                <FontAwesome5 name="arrow-left" size={24} color="white" />
+            </TouchableOpacity>
             <GestureDetector gesture={gesture}>
                 <View style={styles.screen}>
                     {/* Reset Position Button */}
@@ -116,6 +120,7 @@ const GeneratedRecipe = ({ navigation, route }) => {
                     >
                         <Entypo name="back-in-time" size={26} color="white" />
                     </TouchableOpacity>
+
                     <ScrollView contentContainerStyle={styles.scrollViewContainer} showsVerticalScrollIndicator={false}>
                         <View style={styles.container}>
                             {/* Render the top card with gesture detection */}
@@ -156,22 +161,44 @@ const styles = StyleSheet.create({
     screen: {
         flex: 1,
         backgroundColor: '#fff',
+        marginBottom: -20
     },
     scrollViewContainer: {
         flexGrow: 1,
         alignItems: 'center',
         paddingVertical: 20,
+        marginTop: 40,
+        marginBottom: 30
     },
     container: {
         flex: 1,
         padding: 16,
         alignItems: 'center',
         marginTop: 80,
+        marginBottom: 10
+    },
+    backButton: {
+        position: "absolute",
+        top: 10,
+        left: 10,
+        zIndex: 1,
+        backgroundColor: "black",
+        borderRadius: 20,
+        padding: 10,
+        shadowColor: "black",
+        shadowOffset: { width: 2, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        marginTop: 50
+
     },
     resetButton: {
         backgroundColor: 'black',
         borderRadius: 40,
-        marginTop: 10,
+        marginTop: 40,
     },
     buttonWrapper: {
         flexDirection: 'row',

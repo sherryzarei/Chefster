@@ -15,18 +15,18 @@ app.use(express.urlencoded({ extended: true }));
 
 // Initialize Firebase Admin
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://chefster-e2086.firebaseio.com"
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://chefster-e2086.firebaseio.com"
 });
 const db = admin.firestore();
 
 // Create HTTP server for Socket.io
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+    },
 });
 
 // =============== SOCKET.IO (Chat Feature) ===================
@@ -273,7 +273,7 @@ app.get('/ingredients', async (req, res) => {
 });
 
 // =============== START SERVER ===================
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8323;
 server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -38,7 +38,7 @@ export default function ChooseIngredients({ navigation }) {
     const ingredientsQuery = selectedIngredients.join(",");
 
     // Construct the query URL using the collected metrics from the global state
-    const queryURL = `http://${IP_ADDRESS}:8080/recipes_filter?cookingTime=${cookingTime}&mealType=${mealType}&dietType=${dietType}&ingredients=${encodeURIComponent(
+    const queryURL = `http://${IP_ADDRESS}:8323/recipes_filter?cookingTime=${cookingTime}&mealType=${mealType}&dietType=${dietType}&ingredients=${encodeURIComponent(
       ingredientsQuery
     )}`;
 
@@ -66,12 +66,17 @@ export default function ChooseIngredients({ navigation }) {
     }
     try {
       const response = await fetch(
-        `http://${IP_ADDRESS}:8080/ingredients?ingredient=${encodeURIComponent(
-          query
-        )}`
+        `http://${IP_ADDRESS}:8323/ingredients?ingredient=${encodeURIComponent(query)}`
       );
-      const ingredientSuggestions = await response.json();
-      setFilteredIngredients(ingredientSuggestions);
+      const text = await response.text(); // Get raw response as text
+      console.log("Raw Response:", text); // Log the raw response
+      try {
+        const ingredientSuggestions = JSON.parse(text); // Attempt to parse as JSON
+        setFilteredIngredients(ingredientSuggestions);
+      } catch (jsonError) {
+        console.error("JSON Parse Error:", jsonError);
+        setFilteredIngredients([]);
+      }
     } catch (error) {
       console.error("Error fetching ingredient suggestions:", error.message);
       setFilteredIngredients([]);
