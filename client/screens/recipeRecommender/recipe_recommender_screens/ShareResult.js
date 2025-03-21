@@ -14,12 +14,15 @@ import {
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { ScrollView } from "react-native-gesture-handler";
 import { auth, db } from "../../../firebase"; // Adjust path to your firebase config
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, onSnapshot } from "firebase/firestore";
 import Toast from "react-native-toast-message";
 import RecipePosts from "../../components/RecipePosts"; // Adjust path to your RecipePosts component
 import { FontAwesome5 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get("window");
+
+// Define the fallback image URL as a constant
+const FALLBACK_IMAGE = "https://www.vlp.org.uk/wp-content/uploads/2024/12/c830d1dee245de3c851f0f88b6c57c83c69f3ace.png";
 
 const socialIcons = [
     { id: 1, name: "instagram", color: "#E1306C" },
@@ -29,11 +32,38 @@ const socialIcons = [
     { id: 5, name: "pinterest", color: "#E60023" },
 ];
 
+// Custom component for user item to manage image state
+const UserItem = ({ item }) => {
+    const [imageSource, setImageSource] = useState(item.profileImage || FALLBACK_IMAGE);
+
+    return (
+        <TouchableOpacity style={styles.userItem}>
+            <View style={styles.userItemContent}>
+                <Image
+                    source={{ uri: imageSource }}
+                    style={styles.userImage}
+                    onError={() => setImageSource(FALLBACK_IMAGE)} // Fallback on error
+                />
+                <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
+                    {item.firstName} {item.lastName}
+                </Text>
+                {item.city && (
+                    <Text style={styles.userLocation} numberOfLines={1} ellipsizeMode="tail">
+                        {item.city}, {item.country}
+                    </Text>
+                )}
+            </View>
+        </TouchableOpacity>
+    );
+};
+
 export default function ShareResult({ route, navigation }) {
     const { imageUri } = route.params; // Receive imageUri from navigation
     const [modalVisible, setModalVisible] = useState(false);
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [users, setUsers] = useState([]); // State for list of users
+    const [activeTab, setActiveTab] = useState("socials"); // "socials" or "users"
 
     const userId = auth.currentUser?.uid;
 
@@ -57,6 +87,24 @@ export default function ShareResult({ route, navigation }) {
         };
 
         fetchUserData();
+    }, []);
+
+    // Fetch all users from Firestore
+    useEffect(() => {
+        const usersRef = collection(db, "users");
+        const q = query(usersRef);
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const usersList = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setUsers(usersList);
+        }, (error) => {
+            console.error("Error fetching users:", error);
+        });
+
+        return unsubscribe;
     }, []);
 
     // Callback for successful post
@@ -92,7 +140,7 @@ export default function ShareResult({ route, navigation }) {
                     </View>
                 </ScrollView>
 
-                {/* Social Share Modal */}
+                {/* Social Share Modal with Tabs */}
                 <Modal
                     animationType="slide"
                     transparent={true}
@@ -101,17 +149,53 @@ export default function ShareResult({ route, navigation }) {
                 >
                     <View style={styles.modalContainer}>
                         <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Share on</Text>
-                            <FlatList
-                                data={socialIcons}
-                                horizontal
-                                keyExtractor={(item) => item.id.toString()}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity style={styles.iconWrapper}>
-                                        <FontAwesome name={item.name} size={32} color={item.color} />
-                                    </TouchableOpacity>
-                                )}
-                            />
+                            <Text style={styles.modalTitle}>Share Your Recipe</Text>
+
+                            {/* Tab Buttons */}
+                            <View style={styles.tabContainer}>
+                                <TouchableOpacity
+                                    style={[styles.tabButton, activeTab === "socials" && styles.activeTab]}
+                                    onPress={() => setActiveTab("socials")}
+                                >
+                                    <Text style={styles.tabText}>Socials</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.tabButton, activeTab === "users" && styles.activeTab]}
+                                    onPress={() => setActiveTab("users")}
+                                >
+                                    <Text style={styles.tabText}>Users</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Tab Content */}
+                            {activeTab === "socials" ? (
+                                <FlatList
+                                    data={socialIcons}
+                                    horizontal
+                                    numColumns={1} // Explicitly set to 1 for horizontal list
+                                    keyExtractor={(item) => item.id.toString()}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity style={styles.iconWrapper}>
+                                            <FontAwesome name={item.name} size={32} color={item.color} />
+                                        </TouchableOpacity>
+                                    )}
+                                    key="socials" // Unique key to force re-mount
+                                />
+                            ) : (
+                                <FlatList
+                                    data={users}
+                                    keyExtractor={(item) => item.id}
+                                    renderItem={({ item }) => <UserItem item={item} />}
+                                    numColumns={3} // Set to 3 columns for grid layout
+                                    ListEmptyComponent={
+                                        <Text style={styles.noUsersText}>No users found.</Text>
+                                    }
+                                    style={styles.userList}
+                                    columnWrapperStyle={styles.columnWrapper} // Add spacing between columns
+                                    key="users" // Unique key to force re-mount
+                                />
+                            )}
+
                             <TouchableOpacity
                                 style={styles.closeButton}
                                 onPress={() => setModalVisible(false)}
@@ -130,7 +214,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#edf0f5",
-
     },
     scrollViewContainer: {
         flexGrow: 1,
@@ -150,7 +233,6 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 5,
         width: width * 0.9,
-
     },
     backButton: {
         position: "absolute",
@@ -216,6 +298,26 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         marginBottom: 10,
     },
+    tabContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        marginBottom: 20,
+    },
+    tabButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        backgroundColor: "black",
+        marginHorizontal: 5,
+    },
+    activeTab: {
+        backgroundColor: "#FFB700",
+    },
+    tabText: {
+        color: "white",
+        fontWeight: "bold",
+        fontSize: 14,
+    },
     iconWrapper: {
         marginHorizontal: 8,
         alignItems: "center",
@@ -228,6 +330,62 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 3,
         elevation: 3,
+    },
+    userList: {
+        maxHeight: 500, // Limit the height of the user list
+        width: width * 0.95,
+    },
+    columnWrapper: {
+        justifyContent: "space-between", // Space items evenly in each row
+        marginHorizontal: -5, // Adjust for padding
+        width: width * 0.92,
+        alignSelf: "center"
+    },
+    userItem: {
+        flex: 1,
+        margin: 5, // Add margin between items
+        padding: 10,
+        backgroundColor: "white",
+        borderRadius: 15,
+        shadowColor: "black",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3,
+        alignItems: "center", // Center content in grid item
+        width: (width * 0.9 - 20) / 3, // Calculate width for 3 columns (accounting for margins)
+    },
+    userItemContent: {
+        flexDirection: "column", // Stack items vertically
+        alignItems: "center",
+    },
+    userImage: {
+        width: 60, // Slightly larger for grid layout
+        height: 60,
+        borderRadius: 30,
+        marginBottom: 5, // Space between image and text
+        borderWidth: 2,
+        borderColor: "orange",
+    },
+    userInfo: {
+        flex: 1,
+    },
+    userName: {
+        fontSize: 14, // Smaller font for grid layout
+        fontWeight: "bold",
+        color: "black",
+        textAlign: "center",
+    },
+    userLocation: {
+        fontSize: 12, // Smaller font for grid layout
+        color: "#666",
+        textAlign: "center",
+    },
+    noUsersText: {
+        fontSize: 16,
+        color: "#666",
+        textAlign: "center",
+        marginVertical: 20,
     },
     closeButton: {
         marginTop: 20,

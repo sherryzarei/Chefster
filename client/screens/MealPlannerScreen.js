@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   button: { backgroundColor: 'black', padding: 12, borderRadius: 8, marginTop: 16 },
   buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
   bodyContainer: { padding: 20, backgroundColor: '#edf0f5', borderColor: 'black', borderWidth: 3, borderRadius: 10, marginVertical: 10 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, marginTop: 12 },
   headerTitle: { fontSize: 16, fontWeight: 'bold', color: 'black', marginLeft: 8 },
   searchBar: { height: 40, borderColor: 'black', borderWidth: 3, borderRadius: 10, paddingLeft: 10, fontSize: 16 }
 });
