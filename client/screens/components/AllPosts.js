@@ -1,15 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
+import {
+    View,
+    Text,
+    Image,
+    TouchableOpacity,
+    StyleSheet,
+    Dimensions,
+    ActivityIndicator,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Fontisto } from "@expo/vector-icons";
 import { Video } from "expo-av";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../../firebase"; // Ensure correct import for Firebase
+import { auth, db } from "../../firebase";
 
 const screenWidth = Dimensions.get("window").width;
 
-const Post = ({ post, onDelete }) => {
+const AllPosts = ({ post, onDelete }) => {
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -33,6 +41,9 @@ const Post = ({ post, onDelete }) => {
 
     if (loading) return <ActivityIndicator size="large" color="#0782F9" style={{ flex: 1 }} />;
 
+    // Use description if available (recipe posts), otherwise fall back to text (standard posts)
+    const postContent = post.description || post.text || "No content available";
+
     return (
         <View style={styles.post}>
             {/* Post Header */}
@@ -47,16 +58,14 @@ const Post = ({ post, onDelete }) => {
                         {userData?.firstName} {userData?.lastName}
                     </Text>
                 </View>
-                {/* <TouchableOpacity onPress={() => onDelete(post.id)}>
-          <MaterialIcons name="delete" size={20} color="#D32F2F" />
-        </TouchableOpacity> */}
                 <TouchableOpacity onPress={() => { }}>
                     <MaterialIcons name="more-vert" size={24} color="#D32F2F" />
                 </TouchableOpacity>
             </View>
-
-            {/* Post Text */}
-            <Text style={styles.postText}>{post.text}</Text>
+            {/* Post Title */}
+            {post.title && <Text style={styles.postTitle}>{post.title}</Text>}
+            {/* Post Text/Description */}
+            <Text style={styles.postText}>{postContent}</Text>
 
             {/* Display Media if Available */}
             {post.mediaUrl && (
@@ -126,6 +135,12 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: "white",
     },
+    postTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#333",
+        marginTop: 10,
+    },
     userName: {
         marginLeft: 7,
         fontSize: 14,
@@ -159,4 +174,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default Post;
+export default AllPosts;

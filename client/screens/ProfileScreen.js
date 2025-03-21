@@ -1,4 +1,4 @@
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,16 @@ import {
   Alert,
 } from "react-native";
 import { auth, db } from "../firebase";
-import { doc, getDoc, collection, query, orderBy, onSnapshot, deleteDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  deleteDoc,
+  where,
+} from "firebase/firestore";
 import PostInput from "./components/PostInput";
 import Toast from "react-native-toast-message";
 import { useNavigation } from "@react-navigation/native";
@@ -26,9 +35,11 @@ const screenWidth = Dimensions.get("window").width;
 const ProfileScreen = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [posts, setPosts] = useState([]);
+  const [standardPosts, setStandardPosts] = useState([]);
+  const [recipePosts, setRecipePosts] = useState([]);
+  const [activeTab, setActiveTab] = useState("standard"); // "standard" or "recipe"
   const userId = auth.currentUser?.uid;
-
+  const navigation = useNavigation();
 
   // Fetch user data from Firestore
   useEffect(() => {
@@ -49,7 +60,7 @@ const ProfileScreen = () => {
     fetchUserData();
   }, [userId]);
 
-  // Fetch posts in real-time
+  // Fetch current user's standard posts in real-time
   useEffect(() => {
     if (!userId) return;
     const postsRef = collection(db, "users", userId, "posts");
@@ -58,17 +69,37 @@ const ProfileScreen = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsList = snapshot.docs.map((doc) => ({
         id: doc.id,
+        userId: userId,
         ...doc.data(),
       }));
-      setPosts(postsList);
+      setStandardPosts(postsList);
     });
 
     return unsubscribe;
   }, [userId]);
 
+  // Fetch current user's recipe posts from recipe_posts collection
+  useEffect(() => {
+    if (!userId) return;
+    const recipePostsRef = collection(db, "recipe_posts");
+    const q = query(
+      recipePostsRef,
+      where("userId", "==", userId), // Filter by current user
+      orderBy("createdAt", "desc")
+    );
 
-  const navigation = useNavigation();
-  // Delete a post from Firestore
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const recipePostsList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setRecipePosts(recipePostsList);
+    });
+
+    return unsubscribe;
+  }, [userId]);
+
+  // Delete a post from Firestore (for both standard and recipe posts)
   const deletePost = async (postId) => {
     Alert.alert(
       "Delete Post",
@@ -80,7 +111,13 @@ const ProfileScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, "users", userId, "posts", postId));
+              // Determine the collection based on the active tab
+              if (activeTab === "standard") {
+                await deleteDoc(doc(db, "users", userId, "posts", postId));
+              } else if (activeTab === "recipe") {
+                await deleteDoc(doc(db, "recipe_posts", postId));
+              }
+
               Toast.show({
                 type: "success",
                 text1: "Post Deleted",
@@ -101,6 +138,7 @@ const ProfileScreen = () => {
   };
 
   if (loading) return <ActivityIndicator size="large" color="#0782F9" style={{ flex: 1 }} />;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
       <StatusBar backgroundColor="gray" />
@@ -110,44 +148,46 @@ const ProfileScreen = () => {
             <>
               <CoverImage />
               <View style={{ flex: 1, alignItems: "center" }}>
-                <View style={{
-                  width: 155,
-                  height: 155,
-                  borderRadius: 999,
-                  borderWidth: 2,
-                  borderColor: "white",
-                  marginTop: -90,
-                }}>
+                <View
+                  style={{
+                    width: 155,
+                    height: 155,
+                    borderRadius: 999,
+                    borderWidth: 2,
+                    borderColor: "white",
+                    marginTop: -90,
+                  }}
+                >
                   <UploadImage />
                 </View>
-                <Text style={{
-                  fontSize: 20,
-                  fontWeight: "bold",
-                  color: "#4B0082",
-                  marginBottom: 10,
-                  marginTop: 30,
-                }}>
+                <Text
+                  style={{
+                    fontSize: 20,
+                    fontWeight: "bold",
+                    color: "#4B0082",
+                    marginBottom: 10,
+                    marginTop: 30,
+                  }}
+                >
                   {userData.firstName} {userData.lastName}
                 </Text>
-
                 <Text style={{ fontSize: 15, color: "black", marginBottom: 10 }}>
                   {userData.about}
                 </Text>
-
                 {(userData.city || userData.state || userData.country) && (
-                  <View style={{
-                    flexDirection: "row",
-                    marginVertical: 6,
-                    alignItems: "center",
-                  }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      marginVertical: 6,
+                      alignItems: "center",
+                    }}
+                  >
                     <MaterialIcons name="location-on" size={24} color="black" />
                     <Text style={{ fontSize: 15, color: "black", marginLeft: 4 }}>
                       {[userData.city, userData.state, userData.country].filter(Boolean).join(", ")}
                     </Text>
                   </View>
                 )}
-
-
                 <View style={{ flexDirection: "column", marginTop: 20, alignItems: "center" }}>
                   <View style={{ flexDirection: "row", width: 260, justifyContent: "space-between" }}>
                     <TouchableOpacity
@@ -160,7 +200,7 @@ const ProfileScreen = () => {
                         backgroundColor: "#4B0082",
                       }}
                     >
-                      <Text style={{ color: "white" }} onPress={() => navigation.navigate("EditProfile")}>
+                      <Text style={{ color: "white" }} onPress={() => navigation.navigate("Friends")}>
                         Friends
                       </Text>
                     </TouchableOpacity>
@@ -180,7 +220,31 @@ const ProfileScreen = () => {
                     </TouchableOpacity>
                   </View>
 
-                  <View style={{ marginTop: 30, width: screenWidth - 40, borderColor: "#ccc", borderWidth: 1, borderRadius: 10 }}>
+                  {/* Tab Buttons */}
+                  <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                      style={[styles.tabButton, activeTab === "standard" && styles.activeTab]}
+                      onPress={() => setActiveTab("standard")}
+                    >
+                      <Text style={styles.tabText}>Original Posts</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.tabButton, activeTab === "recipe" && styles.activeTab]}
+                      onPress={() => setActiveTab("recipe")}
+                    >
+                      <Text style={styles.tabText}>Recipe Posts</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View
+                    style={{
+                      marginTop: 30,
+                      width: screenWidth - 40,
+                      borderColor: "#ccc",
+                      borderWidth: 1,
+                      borderRadius: 10,
+                    }}
+                  >
                     <PostInput onPostSuccess={() => { }} />
                   </View>
                 </View>
@@ -189,7 +253,7 @@ const ProfileScreen = () => {
           }
           ListEmptyComponent={<Text style={styles.noPosts}>No posts yet.</Text>}
           ListFooterComponent={<Toast />}
-          data={posts}
+          data={activeTab === "standard" ? standardPosts : recipePosts}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <Post post={item} onDelete={deletePost} />}
           contentContainerStyle={styles.postsList}
@@ -203,74 +267,39 @@ const ProfileScreen = () => {
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  profileHeader: {
-    alignItems: "center",
-    marginBottom: 20,
-    paddingTop: 20,
+  postList: {
+    marginBottom: 50,
   },
-  userName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#4B0082",
-    marginTop: 10,
-  },
-  userBio: {
-    fontSize: 14,
-    color: "#333",
-    marginTop: 5,
-    textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  sectionHeader: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginTop: 20,
-    marginLeft: 15,
-  },
-  post: {
-    width: screenWidth - 40,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    marginBottom: 10,
-    backgroundColor: "#fff",
-    alignSelf: "center",
-    elevation: 3,
-    shadowColor: "#000",
-    marginTop: 10,
-  },
-  postHeader: {
+  tabContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  },
-  postText: {
-    fontSize: 16,
-    color: "#333",
-    flex: 1,
-  },
-  iconContainer: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  postDate: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 5,
-  },
-  mediaContainer: {
-    marginTop: 10,
-    alignItems: "center",
-  },
-  postImage: {
-    width: "80%",
-    height: 250,
-  },
-  postVideo: {
-    width: "100%",
-    height: 250,
+    width: "90%",
+    marginVertical: 50,
+    marginBottom: -10,
+    borderColor: "#ccc",
+    borderWidth: 1,
     borderRadius: 10,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    backgroundColor: "#fff",
+  },
+  tabButton: {
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: "#ccc",
+    marginLeft: 10
+  },
+  activeTab: {
+    backgroundColor: "#4B0082",
+  },
+  tabText: {
+    color: "white",
+    fontWeight: "bold",
   },
   noPosts: {
     textAlign: "center",
@@ -278,7 +307,4 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 10,
   },
-  postList: {
-    marginBottom: 50
-  }
 });

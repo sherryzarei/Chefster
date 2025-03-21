@@ -63,7 +63,7 @@ const EditPreferences = ({ uid }) => {
 
     const handleSavePreferences = async () => {
         try {
-            await axios.put(`http://${IP_ADDRESS}:8323users/update_user/${userID}`, { foodAllergies, dietType });
+            await axios.put(`http://${IP_ADDRESS}:8323/users/update_user/${userID}`, { foodAllergies, dietType });
             Toast.show({ type: "success", text1: "Preferences updated successfully" });
             setShowModal(false);
         } catch (error) {

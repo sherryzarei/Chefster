@@ -17,6 +17,7 @@ import { auth, db } from "../../../firebase"; // Adjust path to your firebase co
 import { doc, getDoc } from "firebase/firestore";
 import Toast from "react-native-toast-message";
 import RecipePosts from "../../components/RecipePosts"; // Adjust path to your RecipePosts component
+import { FontAwesome5 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get("window");
 
@@ -60,7 +61,7 @@ export default function ShareResult({ route, navigation }) {
 
     // Callback for successful post
     const handlePostSuccess = () => {
-        navigation.navigate("Profile");
+        navigation.navigate("MainTabs", { screen: "Profile" });
     };
 
     if (loading) {
@@ -71,6 +72,9 @@ export default function ShareResult({ route, navigation }) {
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                <FontAwesome5 name="arrow-left" size={24} color="white" />
+            </TouchableOpacity>
             <View style={styles.container}>
                 <ScrollView contentContainerStyle={styles.scrollViewContainer}>
                     <View style={styles.mainContainer}>
@@ -126,10 +130,12 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#edf0f5",
+
     },
     scrollViewContainer: {
         flexGrow: 1,
         alignItems: "center",
+        marginTop: 40
     },
     mainContainer: {
         backgroundColor: "#FFB700",
@@ -144,6 +150,24 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 5,
         width: width * 0.9,
+
+    },
+    backButton: {
+        position: "absolute",
+        top: 10,
+        left: 10,
+        zIndex: 1,
+        backgroundColor: "black",
+        borderRadius: 20,
+        padding: 10,
+        shadowColor: "black",
+        shadowOffset: { width: 2, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        marginTop: 40,
     },
     headerText: {
         fontSize: 18,

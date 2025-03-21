@@ -6,19 +6,14 @@ import { useSharedValue, withSpring, runOnJS, withTiming } from 'react-native-re
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { FontAwesome5 } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const GeneratedRecipe = ({ navigation, route }) => {
-    // Retrieve recipes passed via navigation parameters
     const { recipes } = route.params;
-    // Local state for the recipe deck and rejected recipes
     const [recipeDeck, setRecipeDeck] = useState(recipes);
     const [rejectedRecipes, setRejectedRecipes] = useState([]);
-
-    // Shared animated value for horizontal translation for the top card only
     const translationX = useSharedValue(0);
 
-    // Accept handler: navigates to Accepted Recipe screen with top card and removes it from the deck.
     const [isTransitioning, setIsTransitioning] = useState(false);
 
     const handleAcceptRecipe = useCallback((acceptedRecipe) => {
@@ -28,7 +23,7 @@ const GeneratedRecipe = ({ navigation, route }) => {
                 setRecipeDeck((prevDeck) => prevDeck.slice(1));
                 navigation.navigate('AcceptedRecipe', { acceptedRecipe });
                 setIsTransitioning(false);
-            }, 250); // Match this with animation duration
+            }, 250);
         }
     }, [navigation, isTransitioning]);
 
@@ -43,11 +38,10 @@ const GeneratedRecipe = ({ navigation, route }) => {
                     return remaining;
                 });
                 setIsTransitioning(false);
-            }, 250); // Match this with animation duration
+            }, 250);
         }
     }, [isTransitioning]);
 
-    // Reset handler: merge rejected recipes back into the deck.
     const handleResetPosition = () => {
         if (!isTransitioning) {
             setIsTransitioning(true);
@@ -77,10 +71,8 @@ const GeneratedRecipe = ({ navigation, route }) => {
         );
     }
 
-    // The top recipe is always the first element of the deck.
     const topRecipe = recipeDeck[0];
 
-    // Define a pan gesture for the top card.
     const gesture = Gesture.Pan()
         .enabled(!isTransitioning)
         .onChange((event) => {
@@ -108,27 +100,27 @@ const GeneratedRecipe = ({ navigation, route }) => {
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
-            <TouchableOpacity style={styles.backButton} onPress={() => { navigation.goBack() }}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <FontAwesome5 name="arrow-left" size={24} color="white" />
             </TouchableOpacity>
             <GestureDetector gesture={gesture}>
                 <View style={styles.screen}>
-                    {/* Reset Position Button */}
                     <TouchableOpacity
                         onPress={handleResetPosition}
-                        style={[styles.resetButton, { position: 'absolute', top: 30, left: 20, zIndex: 1, padding: 18 }]}
+                        style={[styles.resetButton, { position: 'absolute', top: 10, right: 20, zIndex: 1, padding: 10 }]}
                     >
                         <Entypo name="back-in-time" size={26} color="white" />
                     </TouchableOpacity>
 
                     <ScrollView contentContainerStyle={styles.scrollViewContainer} showsVerticalScrollIndicator={false}>
-                        <View style={styles.container}>
+                        <View style={styles.cardsContainer}>
                             {/* Render the top card with gesture detection */}
                             <RecipeCard
                                 recipe={topRecipe}
                                 numOfCards={recipeDeck.length}
                                 currentIndex={0}
                                 translationX={translationX}
+                                style={styles.recipeCard}
                             />
                             {/* Render the rest of the cards statically behind the top card */}
                             {recipeDeck.slice(1).map((recipe, index) => (
@@ -137,20 +129,22 @@ const GeneratedRecipe = ({ navigation, route }) => {
                                     recipe={recipe}
                                     numOfCards={recipeDeck.length}
                                     currentIndex={index + 1}
-                                    translationX={{ value: 0 }} // No gesture translation for non-active cards
+                                    translationX={{ value: 0 }}
+                                    style={styles.recipeCard}
                                 />
                             ))}
-                            {/* Control Buttons */}
-                            <View style={styles.buttonWrapper}>
-                                <TouchableOpacity style={[styles.button, { backgroundColor: '#05f5dd' }]} onPress={handleRejectRecipe}>
-                                    <Entypo name="cross" size={24} color="black" />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.button} onPress={() => handleAcceptRecipe(topRecipe)}>
-                                    <Entypo name="check" size={24} color="white" />
-                                </TouchableOpacity>
-                            </View>
                         </View>
                     </ScrollView>
+
+                    {/* Control Buttons - Absolutely Positioned */}
+                    <View style={styles.buttonWrapper}>
+                        <TouchableOpacity style={[styles.button, { backgroundColor: '#05f5dd' }]} onPress={handleRejectRecipe}>
+                            <Entypo name="cross" size={24} color="black" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.button} onPress={() => handleAcceptRecipe(topRecipe)}>
+                            <Entypo name="check" size={24} color="white" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </GestureDetector>
         </SafeAreaView>
@@ -161,21 +155,20 @@ const styles = StyleSheet.create({
     screen: {
         flex: 1,
         backgroundColor: '#fff',
-        marginBottom: -20
     },
     scrollViewContainer: {
         flexGrow: 1,
         alignItems: 'center',
         paddingVertical: 20,
-        marginTop: 40,
-        marginBottom: 30
+        paddingBottom: 100, // Space for the buttons at the bottom
     },
-    container: {
-        flex: 1,
+    cardsContainer: {
         padding: 16,
         alignItems: 'center',
-        marginTop: 80,
-        marginBottom: 10
+        marginTop: 30
+    },
+    recipeCard: {
+        marginBottom: 10, // Space between cards
     },
     backButton: {
         position: "absolute",
@@ -192,21 +185,29 @@ const styles = StyleSheet.create({
         elevation: 5,
         borderBottomWidth: 4,
         borderRightWidth: 4,
-        marginTop: 50
-
+        marginTop: 40,
     },
     resetButton: {
         backgroundColor: 'black',
-        borderRadius: 40,
-        marginTop: 40,
+        borderRadius: 20,
+        shadowColor: 'black',
+        shadowOffset: { width: 2, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        marginTop: -6,
+        zIndex: 10
     },
     buttonWrapper: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginTop: 20,
         width: '100%',
+        paddingHorizontal: 16,
         position: 'absolute',
-        bottom: 30,
+        bottom: 20, // Position buttons at the bottom with some padding
+        zIndex: 15,
     },
     button: {
         backgroundColor: 'black',

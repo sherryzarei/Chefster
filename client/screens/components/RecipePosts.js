@@ -290,6 +290,15 @@ const styles = StyleSheet.create({
     },
     previewContainer: {
         marginBottom: 10,
+        borderWidth: 1.5,
+        borderColor: "black",
+        borderRadius: 12,
+        shadowColor: "black",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        borderBottomWidth: 4
     },
     previewImage: {
         width: "100%",

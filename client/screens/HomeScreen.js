@@ -10,13 +10,15 @@ import {
 import { auth, db } from "../firebase";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { collection, query, orderBy, onSnapshot, getDocs } from "firebase/firestore"; // Added getDocs
+import { collection, query, orderBy, onSnapshot, getDocs } from "firebase/firestore";
 import AllPosts from "./components/AllPosts";
 
 const HomeScreen = () => {
   const navigation = useNavigation();
-  const [posts, setPosts] = useState([]);
+  const [standardPosts, setStandardPosts] = useState([]);
+  const [recipePosts, setRecipePosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("standard"); // "standard" or "recipe"
 
   // Handle sign out
   const handleSignOut = () => {
@@ -31,16 +33,14 @@ const HomeScreen = () => {
       });
   };
 
-  // Fetch all posts from all users
+  // Fetch all standard posts from all users
   useEffect(() => {
-    const fetchAllPosts = async () => {
+    const fetchAllStandardPosts = async () => {
       try {
-        // Get all users
         const usersRef = collection(db, "users");
-        const usersSnapshot = await getDocs(usersRef); // Use getDocs instead of .get()
+        const usersSnapshot = await getDocs(usersRef);
         const unsubscribePromises = [];
 
-        // For each user, listen to their posts subcollection
         usersSnapshot.forEach((userDoc) => {
           const userId = userDoc.id;
           const postsRef = collection(db, "users", userId, "posts");
@@ -49,12 +49,11 @@ const HomeScreen = () => {
           const unsubscribe = onSnapshot(q, (snapshot) => {
             const userPosts = snapshot.docs.map((doc) => ({
               id: doc.id,
-              userId: userId, // Include userId for fetching user data in Post component
+              userId: userId,
               ...doc.data(),
             }));
 
-            // Update posts state by merging new posts
-            setPosts((prevPosts) => {
+            setStandardPosts((prevPosts) => {
               const updatedPosts = [...prevPosts];
               userPosts.forEach((newPost) => {
                 const existingIndex = updatedPosts.findIndex(
@@ -66,7 +65,6 @@ const HomeScreen = () => {
                   updatedPosts[existingIndex] = newPost;
                 }
               });
-              // Sort by createdAt descending
               return updatedPosts.sort(
                 (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
               );
@@ -76,25 +74,41 @@ const HomeScreen = () => {
           unsubscribePromises.push(unsubscribe);
         });
 
-        setLoading(false);
-
-        // Cleanup all subscriptions on unmount
         return () => {
           unsubscribePromises.forEach((unsubscribe) => unsubscribe());
         };
       } catch (error) {
-        console.error("Error fetching posts:", error);
-        setLoading(false);
+        console.error("Error fetching standard posts:", error);
       }
     };
 
-    fetchAllPosts();
+    fetchAllStandardPosts();
   }, []);
 
-  // Render each post using the Post component
-  const renderPost = ({ item }) => (
-    <AllPosts post={item} onDelete={null} /> // No delete option for other users' posts
-  );
+  // Fetch all recipe posts from recipe_posts collection
+  useEffect(() => {
+    const recipePostsRef = collection(db, "recipe_posts");
+    const q = query(recipePostsRef, orderBy("createdAt", "desc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const recipePostsList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setRecipePosts(recipePostsList);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Update loading state when data is fetched
+  useEffect(() => {
+    if (standardPosts.length > 0 || recipePosts.length > 0) {
+      setLoading(false);
+    }
+  }, [standardPosts, recipePosts]);
+
+  const renderPost = ({ item }) => <AllPosts post={item} onDelete={null} />;
 
   if (loading) {
     return (
@@ -106,7 +120,7 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Chat Icon at the top right */}
+      {/* Chat Icon */}
       <TouchableOpacity
         style={styles.chatIcon}
         onPress={() => navigation.navigate("ChatNavigator")}
@@ -118,10 +132,26 @@ const HomeScreen = () => {
         <Text>Email: {auth.currentUser?.email}</Text>
       </View>
 
-      {/* List of all posts */}
+      {/* Tab Buttons */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === "standard" && styles.activeTab]}
+          onPress={() => setActiveTab("standard")}
+        >
+          <Text style={styles.tabText}>Original Posts</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === "recipe" && styles.activeTab]}
+          onPress={() => setActiveTab("recipe")}
+        >
+          <Text style={styles.tabText}>Recipe Posts</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Posts List */}
       <FlatList
-        data={posts}
-        keyExtractor={(item) => `${item.userId}-${item.id}`} // Unique key across users
+        data={activeTab === "standard" ? standardPosts : recipePosts}
+        keyExtractor={(item) => `${item.userId}-${item.id}`} // Ensure unique keys
         renderItem={renderPost}
         ListEmptyComponent={<Text style={styles.noPosts}>No posts yet.</Text>}
         contentContainerStyle={styles.postsList}
@@ -159,6 +189,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     marginTop: 100,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginVertical: 30,
+  },
+  tabButton: {
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: "#ccc",
+  },
+  activeTab: {
+    backgroundColor: "black",
+  },
+  tabText: {
+    color: "white",
+    fontWeight: "bold",
   },
   button: {
     backgroundColor: "#0782F9",
