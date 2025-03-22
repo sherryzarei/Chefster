@@ -262,11 +262,23 @@ const ChatDetail = ({ route }) => {
 
   // Render message content (text or image)
   const renderMessageContent = (item) => {
-    if (item.imageUrl) {
+    if (item.imageUrl && item.message) {
+      // Handle shared recipe (text + image)
+      const [title, ...descriptionParts] = item.message ? item.message.split('\n') : ['', ''];
+      const description = descriptionParts.join('\n');
+
       return (
-        <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} />
+        <View>
+          <Text style={styles.messageTitle}>{highlightText(title)}</Text>
+          <Text style={styles.messageDescription}>{highlightText(description)}</Text>
+          <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} />
+        </View>
       );
+    } else if (item.imageUrl) {
+      // Handle standalone image
+      return <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} />;
     } else {
+      // Handle standalone text
       return <Text style={styles.message}>{highlightText(item.message)}</Text>;
     }
   };
@@ -547,6 +559,17 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 16,
     color: "#333",
+  },
+  messageTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 5,
+  },
+  messageDescription: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 10,
   },
   imageMessage: {
     width: 200,

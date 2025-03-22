@@ -13,15 +13,13 @@ import {
 } from "react-native";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { ScrollView } from "react-native-gesture-handler";
-import { auth, db } from "../../../firebase"; // Adjust path to your firebase config
-import { doc, getDoc, collection, query, onSnapshot } from "firebase/firestore";
+import { auth, db } from "../../../firebase";
+import { doc, getDoc, collection, query, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 import Toast from "react-native-toast-message";
-import RecipePosts from "../../components/RecipePosts"; // Adjust path to your RecipePosts component
+import RecipePosts from "../../components/RecipePosts";
 import { FontAwesome5 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get("window");
-
-// Define the fallback image URL as a constant
 const FALLBACK_IMAGE = "https://www.vlp.org.uk/wp-content/uploads/2024/12/c830d1dee245de3c851f0f88b6c57c83c69f3ace.png";
 
 const socialIcons = [
@@ -32,17 +30,20 @@ const socialIcons = [
     { id: 5, name: "pinterest", color: "#E60023" },
 ];
 
-// Custom component for user item to manage image state
-const UserItem = ({ item }) => {
+// Updated UserItem to handle selection
+const UserItem = ({ item, selected, onSelect }) => {
     const [imageSource, setImageSource] = useState(item.profileImage || FALLBACK_IMAGE);
 
     return (
-        <TouchableOpacity style={styles.userItem}>
+        <TouchableOpacity
+            style={[styles.userItem, selected && styles.selectedUserItem]}
+            onPress={() => onSelect(item.id)}
+        >
             <View style={styles.userItemContent}>
                 <Image
                     source={{ uri: imageSource }}
                     style={styles.userImage}
-                    onError={() => setImageSource(FALLBACK_IMAGE)} // Fallback on error
+                    onError={() => setImageSource(FALLBACK_IMAGE)}
                 />
                 <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
                     {item.firstName} {item.lastName}
@@ -52,22 +53,25 @@ const UserItem = ({ item }) => {
                         {item.city}, {item.country}
                     </Text>
                 )}
+                {selected && (
+                    <FontAwesome name="check" size={20} color="green" style={styles.checkIcon} />
+                )}
             </View>
         </TouchableOpacity>
     );
 };
 
 export default function ShareResult({ route, navigation }) {
-    const { imageUri } = route.params; // Receive imageUri from navigation
+    const { imageUri, recipeTitle = "Default Title", recipeDescription = "Default Description" } = route.params;
     const [modalVisible, setModalVisible] = useState(false);
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [users, setUsers] = useState([]); // State for list of users
-    const [activeTab, setActiveTab] = useState("socials"); // "socials" or "users"
+    const [users, setUsers] = useState([]);
+    const [activeTab, setActiveTab] = useState("socials");
+    const [selectedUsers, setSelectedUsers] = useState([]);
 
     const userId = auth.currentUser?.uid;
 
-    // Fetch user data
     useEffect(() => {
         const fetchUserData = async () => {
             if (!userId) {
@@ -85,15 +89,12 @@ export default function ShareResult({ route, navigation }) {
                 setLoading(false);
             }
         };
-
         fetchUserData();
     }, []);
 
-    // Fetch all users from Firestore
     useEffect(() => {
         const usersRef = collection(db, "users");
         const q = query(usersRef);
-
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const usersList = snapshot.docs.map((doc) => ({
                 id: doc.id,
@@ -103,19 +104,57 @@ export default function ShareResult({ route, navigation }) {
         }, (error) => {
             console.error("Error fetching users:", error);
         });
-
         return unsubscribe;
     }, []);
 
-    // Callback for successful post
     const handlePostSuccess = () => {
         navigation.navigate("MainTabs", { screen: "Profile" });
     };
 
-    if (loading) {
-        return (
-            <ActivityIndicator size="large" color="#0782F9" style={{ flex: 1 }} />
+    const handleSelectUser = (userId) => {
+        setSelectedUsers((prev) =>
+            prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
         );
+    };
+
+    const handleSendToUsers = async () => {
+        if (selectedUsers.length === 0) return;
+
+        const senderId = auth.currentUser?.uid;
+        const messageData = {
+            senderId,
+            message: `${recipeTitle}\n${recipeDescription}`,
+            imageUrl: imageUri,
+            created_at: serverTimestamp(),
+        };
+
+        try {
+            for (const userId of selectedUsers) {
+                await addDoc(collection(db, "privateMessages"), {
+                    ...messageData,
+                    receiverId: userId,
+                });
+            }
+
+            Toast.show({
+                type: "success",
+                text1: "Success",
+                text2: `Content sent to ${selectedUsers.length} user(s)`,
+            });
+            setModalVisible(false);
+            setSelectedUsers([]);
+        } catch (error) {
+            console.error("Error sending messages:", error);
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Failed to send content",
+            });
+        }
+    };
+
+    if (loading) {
+        return <ActivityIndicator size="large" color="#0782F9" style={{ flex: 1 }} />;
     }
 
     return (
@@ -140,7 +179,6 @@ export default function ShareResult({ route, navigation }) {
                     </View>
                 </ScrollView>
 
-                {/* Social Share Modal with Tabs */}
                 <Modal
                     animationType="slide"
                     transparent={true}
@@ -150,8 +188,6 @@ export default function ShareResult({ route, navigation }) {
                     <View style={styles.modalContainer}>
                         <View style={styles.modalContent}>
                             <Text style={styles.modalTitle}>Share Your Recipe</Text>
-
-                            {/* Tab Buttons */}
                             <View style={styles.tabContainer}>
                                 <TouchableOpacity
                                     style={[styles.tabButton, activeTab === "socials" && styles.activeTab]}
@@ -167,33 +203,47 @@ export default function ShareResult({ route, navigation }) {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* Tab Content */}
                             {activeTab === "socials" ? (
                                 <FlatList
                                     data={socialIcons}
                                     horizontal
-                                    numColumns={1} // Explicitly set to 1 for horizontal list
                                     keyExtractor={(item) => item.id.toString()}
                                     renderItem={({ item }) => (
                                         <TouchableOpacity style={styles.iconWrapper}>
                                             <FontAwesome name={item.name} size={32} color={item.color} />
                                         </TouchableOpacity>
                                     )}
-                                    key="socials" // Unique key to force re-mount
+                                    key="socials"
                                 />
                             ) : (
-                                <FlatList
-                                    data={users}
-                                    keyExtractor={(item) => item.id}
-                                    renderItem={({ item }) => <UserItem item={item} />}
-                                    numColumns={3} // Set to 3 columns for grid layout
-                                    ListEmptyComponent={
-                                        <Text style={styles.noUsersText}>No users found.</Text>
-                                    }
-                                    style={styles.userList}
-                                    columnWrapperStyle={styles.columnWrapper} // Add spacing between columns
-                                    key="users" // Unique key to force re-mount
-                                />
+                                <>
+                                    <FlatList
+                                        data={users}
+                                        keyExtractor={(item) => item.id}
+                                        renderItem={({ item }) => (
+                                            <UserItem
+                                                item={item}
+                                                selected={selectedUsers.includes(item.id)}
+                                                onSelect={handleSelectUser}
+                                            />
+                                        )}
+                                        numColumns={3}
+                                        ListEmptyComponent={<Text style={styles.noUsersText}>No users found.</Text>}
+                                        style={styles.userList}
+                                        columnWrapperStyle={styles.columnWrapper}
+                                        key="users"
+                                    />
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.sendButton,
+                                            selectedUsers.length === 0 && styles.disabledButton,
+                                        ]}
+                                        onPress={handleSendToUsers}
+                                        disabled={selectedUsers.length === 0}
+                                    >
+                                        <Text style={styles.sendButtonText}>Send to Selected Users</Text>
+                                    </TouchableOpacity>
+                                </>
                             )}
 
                             <TouchableOpacity
@@ -210,6 +260,7 @@ export default function ShareResult({ route, navigation }) {
     );
 }
 
+// Styles remain unchanged
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -233,6 +284,29 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 5,
         width: width * 0.9,
+    },
+    selectedUserItem: {
+        backgroundColor: "#d3d3d3",
+    },
+    checkIcon: {
+        position: "absolute",
+        top: 5,
+        right: 5,
+    },
+    sendButton: {
+        backgroundColor: "#FFB700",
+        padding: 15,
+        borderRadius: 20,
+        marginTop: 10,
+        alignItems: "center",
+    },
+    disabledButton: {
+        backgroundColor: "#ccc",
+    },
+    sendButtonText: {
+        color: "black",
+        fontWeight: "bold",
+        fontSize: 16,
     },
     backButton: {
         position: "absolute",
@@ -332,18 +406,18 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     userList: {
-        maxHeight: 500, // Limit the height of the user list
+        maxHeight: 500,
         width: width * 0.95,
     },
     columnWrapper: {
-        justifyContent: "space-between", // Space items evenly in each row
-        marginHorizontal: -5, // Adjust for padding
+        justifyContent: "space-between",
+        marginHorizontal: -5,
         width: width * 0.92,
         alignSelf: "center"
     },
     userItem: {
         flex: 1,
-        margin: 5, // Add margin between items
+        margin: 5,
         padding: 10,
         backgroundColor: "white",
         borderRadius: 15,
@@ -352,32 +426,29 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 3,
         elevation: 3,
-        alignItems: "center", // Center content in grid item
-        width: (width * 0.9 - 20) / 3, // Calculate width for 3 columns (accounting for margins)
+        alignItems: "center",
+        width: (width * 0.9 - 20) / 3,
     },
     userItemContent: {
-        flexDirection: "column", // Stack items vertically
+        flexDirection: "column",
         alignItems: "center",
     },
     userImage: {
-        width: 60, // Slightly larger for grid layout
+        width: 60,
         height: 60,
         borderRadius: 30,
-        marginBottom: 5, // Space between image and text
+        marginBottom: 5,
         borderWidth: 2,
         borderColor: "orange",
     },
-    userInfo: {
-        flex: 1,
-    },
     userName: {
-        fontSize: 14, // Smaller font for grid layout
+        fontSize: 14,
         fontWeight: "bold",
         color: "black",
         textAlign: "center",
     },
     userLocation: {
-        fontSize: 12, // Smaller font for grid layout
+        fontSize: 12,
         color: "#666",
         textAlign: "center",
     },
