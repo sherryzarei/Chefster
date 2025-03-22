@@ -30,7 +30,6 @@ const socialIcons = [
     { id: 5, name: "pinterest", color: "#E60023" },
 ];
 
-// Updated UserItem to handle selection
 const UserItem = ({ item, selected, onSelect }) => {
     const [imageSource, setImageSource] = useState(item.profileImage || FALLBACK_IMAGE);
 
@@ -62,7 +61,9 @@ const UserItem = ({ item, selected, onSelect }) => {
 };
 
 export default function ShareResult({ route, navigation }) {
-    const { imageUri, recipeTitle = "Default Title", recipeDescription = "Default Description" } = route.params;
+    const { imageUri } = route.params; // Only imageUri comes from route.params
+    const [recipeTitle, setRecipeTitle] = useState(""); // State for form title
+    const [recipeDescription, setRecipeDescription] = useState(""); // State for form description
     const [modalVisible, setModalVisible] = useState(false);
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -123,7 +124,7 @@ export default function ShareResult({ route, navigation }) {
         const senderId = auth.currentUser?.uid;
         const messageData = {
             senderId,
-            message: `${recipeTitle}\n${recipeDescription}`,
+            message: `${recipeTitle}\n${recipeDescription}`, // Use state values
             imageUrl: imageUri,
             created_at: serverTimestamp(),
         };
@@ -162,11 +163,24 @@ export default function ShareResult({ route, navigation }) {
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <FontAwesome5 name="arrow-left" size={24} color="white" />
             </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.homeButton}
+                onPress={() => navigation.navigate("MainTabs", { screen: "Home" })}
+            >
+                <FontAwesome5 name="home" size={24} color="white" />
+            </TouchableOpacity>
             <View style={styles.container}>
                 <ScrollView contentContainerStyle={styles.scrollViewContainer}>
                     <View style={styles.mainContainer}>
                         <Text style={styles.headerText}>Share Your Recipe Result</Text>
-                        <RecipePosts onPostSuccess={handlePostSuccess} imageUri={imageUri} />
+                        <RecipePosts
+                            onPostSuccess={handlePostSuccess}
+                            imageUri={imageUri}
+                            recipeTitle={recipeTitle}
+                            recipeDescription={recipeDescription}
+                            setRecipeTitle={setRecipeTitle}
+                            setRecipeDescription={setRecipeDescription}
+                        />
                         <View style={styles.buttonWrapper}>
                             <TouchableOpacity
                                 style={styles.shareButtons}
@@ -302,6 +316,23 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         backgroundColor: "#ccc",
+    },
+    homeButton: {
+        position: "absolute",
+        top: 10,
+        right: 10, // Positions it on the right side
+        zIndex: 1,
+        backgroundColor: "black",
+        borderRadius: 20,
+        padding: 10,
+        shadowColor: "black",
+        shadowOffset: { width: 2, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        marginTop: 40,
     },
     sendButtonText: {
         color: "black",

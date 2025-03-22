@@ -9,16 +9,21 @@ import {
     ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { auth, db, storage } from "../../firebase"; // Adjust path to your firebase config
+import { auth, db, storage } from "../../firebase";
 import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { Video } from "expo-av";
 
-const RecipePosts = ({ onPostSuccess, imageUri }) => {
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
+const RecipePosts = ({
+    onPostSuccess,
+    imageUri,
+    recipeTitle,          // Add these props
+    recipeDescription,
+    setRecipeTitle,
+    setRecipeDescription,
+}) => {
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [media, setMedia] = useState(null);
@@ -64,17 +69,15 @@ const RecipePosts = ({ onPostSuccess, imageUri }) => {
         try {
             const response = await fetch(uri);
             const blob = await response.blob();
-            const fileName = `${userId}_${Date.now()}.${fileType === "video" ? "mp4" : "jpg"
-                }`;
-            const storageRef = ref(storage, `recipe_posts_media/${fileName}`); // Dedicated folder
+            const fileName = `${userId}_${Date.now()}.${fileType === "video" ? "mp4" : "jpg"}`;
+            const storageRef = ref(storage, `recipe_posts_media/${fileName}`);
             const uploadTask = uploadBytesResumable(storageRef, blob);
 
             return new Promise((resolve, reject) => {
                 uploadTask.on(
                     "state_changed",
                     (snapshot) => {
-                        const progress =
-                            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                         console.log(`Upload is ${progress.toFixed()}% done`);
                     },
                     (error) => {
@@ -98,7 +101,7 @@ const RecipePosts = ({ onPostSuccess, imageUri }) => {
 
     // Handle Recipe Post Creation
     const handlePost = async () => {
-        if (!title.trim() && !description.trim() && !media && !imageUri) {
+        if (!recipeTitle.trim() && !recipeDescription.trim() && !media && !imageUri) {
             Toast.show({
                 type: "error",
                 text1: "Empty Recipe Post",
@@ -117,31 +120,30 @@ const RecipePosts = ({ onPostSuccess, imageUri }) => {
                 mediaType = media.type;
                 mediaUrl = await uploadMedia(media.uri, mediaType);
             } else if (imageUri) {
-                // Use imageUri passed from ShareResult if no media is selected
                 mediaType = "image";
                 mediaUrl = await uploadMedia(imageUri, "image");
             }
 
             if (!userId) throw new Error("User not authenticated");
 
-            const recipePostsRef = collection(db, "recipe_posts"); // Top-level collection, created programmatically
+            const recipePostsRef = collection(db, "recipe_posts");
             await addDoc(recipePostsRef, {
-                title: title,
-                description: description,
+                title: recipeTitle,         // Use prop
+                description: recipeDescription, // Use prop
                 mediaUrl,
                 mediaType,
                 createdAt: Timestamp.now(),
                 userId,
                 likes: 0,
                 comments: [],
-                prepTime: 15, // Placeholder; could add UI input later
-                servings: 2, // Placeholder; could add UI input later
+                prepTime: 15,
+                servings: 2,
                 dietType: userData?.dietType || "",
             });
 
-            // Reset input fields
-            setTitle("");
-            setDescription("");
+            // Reset input fields using setters from props
+            setRecipeTitle("");
+            setRecipeDescription("");
             setMedia(null);
             onPostSuccess();
             Toast.show({
@@ -184,16 +186,16 @@ const RecipePosts = ({ onPostSuccess, imageUri }) => {
             <TextInput
                 style={styles.postInputTitle}
                 placeholder="Recipe Title"
-                value={title}
-                onChangeText={setTitle}
+                value={recipeTitle}          // Controlled by prop
+                onChangeText={setRecipeTitle} // Updates ShareResult state
             />
 
             {/* Description Input */}
             <TextInput
                 style={styles.postInput}
                 placeholder="Share your thoughts about recipe..."
-                value={description}
-                onChangeText={setDescription}
+                value={recipeDescription}    // Controlled by prop
+                onChangeText={setRecipeDescription} // Updates ShareResult state
                 multiline
             />
 
@@ -239,6 +241,9 @@ const RecipePosts = ({ onPostSuccess, imageUri }) => {
         </View>
     );
 };
+
+// Styles remain unchanged (omitted for brevity)
+
 
 const styles = StyleSheet.create({
     postContainer: {

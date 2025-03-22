@@ -8,7 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { BlurView } from "expo-blur";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
+import Toast, { BaseToast } from "react-native-toast-message";
 
 // Import Screens
 import LoginScreen from "./screens/LoginScreen";
@@ -157,6 +157,52 @@ export function MainTabNavigator() {
   );
 }
 
+// Define custom toast styles
+const toastConfig = {
+  success: (props) => (
+    <BaseToast
+      {...props}
+      style={{
+        borderLeftColor: "green",
+        backgroundColor: "black",
+        borderRadius: 15,
+        height: 80,
+      }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "yellow",
+      }}
+      text2Style={{
+        fontSize: 18,
+        color: "yellow",
+      }}
+    />
+  ),
+  error: (props) => (
+    <BaseToast
+      {...props}
+      style={{
+        borderLeftColor: "red",
+        backgroundColor: "black",
+        borderRadius: 15,
+        height: 80,
+      }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "red",
+      }}
+      text2Style={{
+        fontSize: 18,
+        color: "red",
+      }}
+    />
+  ),
+};
+
 export function App() {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
@@ -225,6 +271,7 @@ export default () => {
     <GestureHandlerRootView style={styles.container}>
       <NavigationContainer>
         <App />
+        <Toast config={toastConfig} />
       </NavigationContainer>
     </GestureHandlerRootView>
   );

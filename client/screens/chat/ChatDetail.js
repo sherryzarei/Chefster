@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  SafeAreaView
 } from "react-native";
 import { io } from "socket.io-client";
 import {
@@ -390,130 +391,132 @@ const ChatDetail = ({ route }) => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <View style={styles.inner}>
-        {/* Header with Back Button and Three-Dots Menu */}
-        <View style={styles.headerContainer}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>{"<"}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={navigateToProfile} style={styles.userInfo}>
-            <Image
-              source={{ uri: selectedUser.photo }}
-              style={styles.profilePhoto}
-            />
-            <Text style={styles.header}>
-              {isBlocked ? "Deleted Account" : selectedUser.name}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleMenu} style={styles.menuButton}>
-            <Ionicons name="ellipsis-vertical" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Three-Dots Menu Modal */}
-        <Modal
-          visible={menuVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setMenuVisible(false)}
-        >
-          <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
-            <View style={styles.menuOverlay}>
-              <View style={styles.menuContainer}>
-                <TouchableOpacity onPress={handleBlock} style={styles.menuItem}>
-                  <Text style={styles.menuText}>
-                    {isBlocked ? "Unblock User" : "Block User"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSearch}
-                  style={styles.menuItem}
-                >
-                  <Text style={styles.menuText}>Search</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleDeleteChat}
-                  style={styles.menuItem}
-                >
-                  <Text style={styles.menuText}>Delete Chat</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-
-        {/* Search Bar */}
-        {isSearchBarVisible && (
-          <View style={styles.searchBarContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search messages..."
-              placeholderTextColor="#AAA"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            <TouchableOpacity onPress={closeSearchBar}>
-              <Ionicons name="close" size={24} color="#333" />
+    <SafeAreaView style={{ flex: 1 }}>
+      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+        <View style={styles.inner}>
+          {/* Header with Back Button and Three-Dots Menu */}
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Text style={styles.backButtonText}>{"<"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={navigateToProfile} style={styles.userInfo}>
+              <Image
+                source={{ uri: selectedUser.photo }}
+                style={styles.profilePhoto}
+              />
+              <Text style={styles.header}>
+                {isBlocked ? "Deleted Account" : selectedUser.name}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleMenu} style={styles.menuButton}>
+              <Ionicons name="ellipsis-vertical" size={24} color="#333" />
             </TouchableOpacity>
           </View>
-        )}
 
-        {/* Chat Messages */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.messageContainer,
-                {
-                  alignSelf:
-                    item.senderId === auth.currentUser.uid
-                      ? "flex-end"
-                      : "flex-start",
-                  backgroundColor:
-                    item.senderId === auth.currentUser.uid
-                      ? "#A0E3FF"
-                      : "#E0E0E0",
-                },
-              ]}
-            >
-              {renderMessageContent(item)}
+          {/* Three-Dots Menu Modal */}
+          <Modal
+            visible={menuVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setMenuVisible(false)}
+          >
+            <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
+              <View style={styles.menuOverlay}>
+                <View style={styles.menuContainer}>
+                  <TouchableOpacity onPress={handleBlock} style={styles.menuItem}>
+                    <Text style={styles.menuText}>
+                      {isBlocked ? "Unblock User" : "Block User"}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleSearch}
+                    style={styles.menuItem}
+                  >
+                    <Text style={styles.menuText}>Search</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleDeleteChat}
+                    style={styles.menuItem}
+                  >
+                    <Text style={styles.menuText}>Delete Chat</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </Modal>
+
+          {/* Search Bar */}
+          {isSearchBarVisible && (
+            <View style={styles.searchBarContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search messages..."
+                placeholderTextColor="#AAA"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              <TouchableOpacity onPress={closeSearchBar}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
             </View>
           )}
-          onContentSizeChange={scrollToBottom}
-          onLayout={scrollToBottom}
-        />
 
-        {/* Message Input and Image Picker */}
-        <View style={styles.inputContainer}>
-          <TouchableOpacity onPress={shareMusicLink} style={styles.musicButton}>
-            <Ionicons name="musical-notes" size={24} color="#333" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={pickImage}
-            style={styles.imagePickerButton}
-          >
-            <Ionicons name="image" size={24} color="#333" />
-          </TouchableOpacity>
-          <TextInput
-            style={styles.input}
-            value={newMessage}
-            onChangeText={setNewMessage}
-            placeholder="Type a message"
-            placeholderTextColor="#AAA"
+          {/* Chat Messages */}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.messageContainer,
+                  {
+                    alignSelf:
+                      item.senderId === auth.currentUser.uid
+                        ? "flex-end"
+                        : "flex-start",
+                    backgroundColor:
+                      item.senderId === auth.currentUser.uid
+                        ? "#A0E3FF"
+                        : "#E0E0E0",
+                  },
+                ]}
+              >
+                {renderMessageContent(item)}
+              </View>
+            )}
+            onContentSizeChange={scrollToBottom}
+            onLayout={scrollToBottom}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-            <Text style={styles.sendButtonText}>Send</Text>
-          </TouchableOpacity>
+
+          {/* Message Input and Image Picker */}
+          <View style={styles.inputContainer}>
+            <TouchableOpacity onPress={shareMusicLink} style={styles.musicButton}>
+              <Ionicons name="musical-notes" size={24} color="#333" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={pickImage}
+              style={styles.imagePickerButton}
+            >
+              <Ionicons name="image" size={24} color="#333" />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.input}
+              value={newMessage}
+              onChangeText={setNewMessage}
+              placeholder="Type a message"
+              placeholderTextColor="#AAA"
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+              <Text style={styles.sendButtonText}>Send</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </TouchableWithoutFeedback>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 };
 
@@ -623,6 +626,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f1f1f1",
     borderRadius: 20,
     marginBottom: 10,
+    borderWidth: 2,
+    borderColor: "black",
   },
   searchInput: {
     flex: 1,
